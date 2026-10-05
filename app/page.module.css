@@ -1,10 +1,13 @@
 .container {
+  --portal-header-height: 73px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
 .header {
+  height: var(--portal-header-height);
+  flex-shrink: 0;
   position: sticky;
   top: 0;
   z-index: 40;
@@ -19,12 +22,18 @@
 }
 
 .brand {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.brand > div:last-child {
+  min-width: 0;
+}
+
 .logoIcon {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,6 +47,9 @@
 }
 
 .brandName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 1.25rem;
   font-weight: 700;
   background: linear-gradient(to right, var(--text-primary), var(--primary));
@@ -46,9 +58,55 @@
 }
 
 .headerActions {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.userEmail {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    --portal-header-height: 112px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .brand,
+  .headerActions {
+    width: 100%;
+  }
+
+  .brandName {
+    font-size: 1rem;
+  }
+
+  .headerActions {
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .userEmail {
+    margin-right: auto;
+    min-width: 0;
+  }
+
+  .headerActions .adminBtn {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
 }
 
 .adminBtn {
@@ -75,7 +133,7 @@
   display: grid;
   grid-template-columns: 360px 1fr;
   flex: 1;
-  height: calc(100vh - 73px);
+  height: calc(100vh - var(--portal-header-height));
   overflow: hidden;
 }
 
@@ -100,10 +158,10 @@
 @media (max-width: 1024px) {
   .sidebar {
     position: fixed;
-    top: 73px;
+    top: var(--portal-header-height);
     left: 0;
     width: 320px;
-    height: calc(100vh - 73px);
+    height: calc(100vh - var(--portal-header-height));
     transform: translateX(-100%);
   }
   
@@ -460,6 +518,7 @@
 }
 
 .mobileMenuBtn {
+  flex-shrink: 0;
   display: none;
   align-items: center;
   justify-content: center;
@@ -485,10 +544,10 @@
   .sidebarOverlay.open {
     display: block;
     position: fixed;
-    top: 73px;
+    top: var(--portal-header-height);
     left: 0;
     width: 100vw;
-    height: calc(100vh - 73px);
+    height: calc(100vh - var(--portal-header-height));
     background-color: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(2px);
     z-index: 25;
@@ -501,7 +560,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 73px);
+  min-height: calc(100vh - var(--portal-header-height));
   padding: 40px;
   text-align: center;
   color: var(--text-secondary);

@@ -45,6 +45,40 @@
   color: var(--text-secondary);
 }
 
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.authTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.authTabs button {
+  flex: 1;
+  padding: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.authTabs button[aria-pressed='true'] {
+  background: var(--primary);
+  color: white;
+}
+
+.resourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resourceRow input {
+  flex: 1;
+  min-width: 160px;
+}
+
 .formGroup {
   display: flex;
   flex-direction: column;

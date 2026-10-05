@@ -1,44 +1,46 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { 
   Play, Check, ChevronDown, ChevronUp, Search, 
   Menu, X, BookOpen, Award, Clock, ExternalLink 
 } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
-import { toggleLessonCompletion, checkAdminAuth, CourseStructure } from '@/app/actions';
+import { toggleLessonCompletion, CourseStructure } from '@/app/actions';
+import { logoutUser } from '@/app/auth-actions';
+import type { SessionUser } from '@/lib/auth';
 import styles from '../page.module.css';
 
 interface CoursePortalClientProps {
   initialData: CourseStructure | null;
+  user: SessionUser;
 }
 
-export default function CoursePortalClient({ initialData }: CoursePortalClientProps) {
-  const [data, setData] = useState<CourseStructure | null>(initialData);
-  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null);
+export default function CoursePortalClient({ initialData, user }: CoursePortalClientProps) {
+  const data = initialData;
+  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(initialData?.lessons[0]?.id ?? null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
+  const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>(
+    initialData?.lessons[0] ? { [initialData.lessons[0].module_id]: true } : {}
+  );
   const [activeTab, setActiveTab] = useState<'info' | 'resources'>('info');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isAdmin = user.role === 'admin';
+  const [progressError, setProgressError] = useState('');
+  const savingProgress = useRef(false);
   
   const [completions, setCompletions] = useState<number[]>(initialData?.completions || []);
   const [isPending, startTransition] = useTransition();
 
-  // Check admin status on mount
-  useEffect(() => {
-    checkAdminAuth().then(setIsAdmin);
-    
-    // Auto-select first lesson if available
-    if (initialData && initialData.lessons.length > 0) {
-      setSelectedLessonId(initialData.lessons[0].id);
-      
-      // Ensure the first lesson's module is expanded
-      const firstLessonModuleId = initialData.lessons[0].module_id;
-      setExpandedModules({ [firstLessonModuleId]: true });
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      window.location.assign('/');
+    } catch {
+      setProgressError('No se pudo cerrar la sesión. Intenta nuevamente.');
     }
-  }, [initialData]);
+  };
 
   if (!data) {
     return (
@@ -54,9 +56,8 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
           <p className={styles.emptyStateText}>
             Configura tu base de datos en Neon para sembrar el curso de muestra o accede al Panel de Administración para crear contenido.
           </p>
-          <Link href="/admin" className={styles.adminBtn}>
-            Ir al Panel de Administración
-          </Link>
+          {isAdmin && <Link href="/admin" className={styles.adminBtn}>Ir al Panel de Administración</Link>}
+          <button onClick={handleLogout} className={styles.adminBtn}>Cerrar sesión</button>
         </div>
       </div>
     );
@@ -84,34 +85,37 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
     }));
   };
 
-  // Toggle completion checkbox with optimistic update
-  const handleToggleCompletion = async (lessonId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Avoid selecting the lesson when clicking checkbox
-    
-    const isCompleted = completions.includes(lessonId);
-    let updatedCompletions: number[];
-    
-    if (isCompleted) {
-      updatedCompletions = completions.filter(id => id !== lessonId);
-    } else {
-      updatedCompletions = [...completions, lessonId];
-    }
-    
-    // Optimistic Update
-    setCompletions(updatedCompletions);
-    
-    // Server Sync
+  const saveCompletion = (lessonId: number, completed: boolean) => {
+    if (savingProgress.current) return;
+    savingProgress.current = true;
+    setProgressError('');
+    const previous = completions;
+    setCompletions(completed ? [...completions, lessonId] : completions.filter(id => id !== lessonId));
     startTransition(async () => {
-      await toggleLessonCompletion(lessonId, !isCompleted);
+      try {
+        const result = await toggleLessonCompletion(lessonId, completed);
+        if (!result.success) {
+          setCompletions(previous);
+          setProgressError(result.error || 'No se pudo guardar el progreso.');
+        }
+      } catch {
+        setCompletions(previous);
+        setProgressError('No se pudo conectar al servidor para guardar el progreso.');
+      } finally {
+        savingProgress.current = false;
+      }
     });
   };
 
-  // Auto-complete lesson when video ends
-  const handleVideoEnded = async () => {
+  const handleToggleCompletion = (lessonId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    saveCompletion(lessonId, !completions.includes(lessonId));
+  };
+
+  const handleVideoEnded = () => {
     if (activeLesson && !completions.includes(activeLesson.id)) {
-      const updatedCompletions = [...completions, activeLesson.id];
-      setCompletions(updatedCompletions);
-      await toggleLessonCompletion(activeLesson.id, true);
+      saveCompletion(activeLesson.id, true);
     }
   };
 
@@ -128,17 +132,16 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
     if (!text) return <p>No hay detalles adicionales para esta lección.</p>;
     
     const parseInline = (line: string) => {
-      // Bold **text**
-      // Italics *text*
-      // Links [text](url)
-      const html = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">$1 <span style="font-size: 0.75rem; vertical-align: middle;">↗</span></a>');
-      return <span dangerouslySetInnerHTML={{ __html: html }} />;
+      return line.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g).map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith('*') && part.endsWith('*')) return <em key={index}>{part.slice(1, -1)}</em>;
+        const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (link && /^https?:\/\//i.test(link[2])) {
+          return <a key={index} href={link[2]} target="_blank" rel="noopener noreferrer"
+            style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{link[1]} ↗</a>;
+        }
+        return part;
+      });
     };
 
     return text.split('\n').map((line, idx) => {
@@ -190,12 +193,13 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
         </div>
 
         <div className={styles.headerActions}>
-          <Link href="/admin" className={styles.adminBtn}>
-            {isAdmin ? 'Panel de Administración' : 'Acceso Administrador'}
-          </Link>
+          <span className={styles.userEmail}>{user.email}</span>
+          {isAdmin && <Link href="/admin" className={styles.adminBtn}>Panel de Administración</Link>}
+          <button onClick={handleLogout} className={styles.adminBtn}>Cerrar sesión</button>
         </div>
       </header>
 
+      {progressError && <p role="alert" style={{ color: 'var(--danger)', padding: 16 }}>{progressError}</p>}
       {/* PORTAL CONTAINER */}
       <main className={styles.mainLayout}>
         {/* MOBILE OVERLAY */}
@@ -284,6 +288,8 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
                                   type="checkbox" 
                                   checked={isCompleted} 
                                   readOnly
+                                  disabled={isPending}
+                                  aria-label={`Completar ${l.title}`}
                                   className={styles.checkboxInput}
                                 />
                                 <span className={styles.customCheckbox}>
@@ -343,6 +349,7 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
                   <button
                     className={`${styles.completeBtn} ${completions.includes(activeLesson.id) ? styles.completed : ''}`}
                     onClick={(e) => handleToggleCompletion(activeLesson.id, e)}
+                    disabled={isPending}
                   >
                     <Check size={16} />
                     {completions.includes(activeLesson.id) ? 'Lección Completada' : 'Marcar como Completada'}
@@ -374,14 +381,24 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
                   ) : (
                     <div className={styles.markdown}>
                       <h4 style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>Recursos de Estudio</h4>
-                      <p>Utiliza estas lecturas y enlaces recomendados para profundizar en el tema de esta lección:</p>
+                      {activeLesson.slides_name && (
+                        <p>
+                          <a href={`/api/lessons/${activeLesson.id}/slides`} style={{ color: 'var(--primary)' }}>
+                            Descargar diapositivas (PDF): {activeLesson.slides_name}
+                          </a>
+                        </p>
+                      )}
+                      {!activeLesson.slides_name && activeLesson.resource_links.length === 0 && (
+                        <p>El administrador aún no ha añadido recursos para esta lección.</p>
+                      )}
                       <ul style={{ paddingLeft: '20px', marginTop: '8px' }}>
-                        <li style={{ marginBottom: '6px' }}>
-                          <strong>Lectura de apoyo:</strong> Consulta los apuntes y textos referentes al módulo en tu bibliografía de estudio.
-                        </li>
-                        <li style={{ marginBottom: '6px' }}>
-                          <strong>Ejercicios prácticos:</strong> Anota tus reflexiones en tu cuaderno de estudio antes de continuar con la siguiente lección.
-                        </li>
+                        {activeLesson.resource_links.map((link, index) => (
+                          <li key={index} style={{ marginBottom: 6 }}>
+                            <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)' }}>
+                              {link.title} <ExternalLink size={12} />
+                            </a>
+                          </li>
+                        ))}
                         {activeLesson.video_url.includes('youtube') && (
                           <li style={{ marginBottom: '6px' }}>
                             <a href={activeLesson.video_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -413,7 +430,7 @@ export default function CoursePortalClient({ initialData }: CoursePortalClientPr
                     </button>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontWeight: '600', fontSize: '0.9rem' }}>
-                      <Award size={18} /> ¡Curso Finalizado!
+                      <Award size={18} /> {completedCount === totalLessonsCount ? '¡Curso Finalizado!' : 'Última lección del curso'}
                     </div>
                   )}
                 </div>

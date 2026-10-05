@@ -4,14 +4,16 @@ import React, { useState, useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { 
   Play, Plus, Edit, Trash2, ArrowUp, ArrowDown, 
-  Lock, Unlock, LogOut, BookOpen, X, Clock, ExternalLink 
+  Lock, Unlock, LogOut, BookOpen, X, Clock
 } from 'lucide-react';
 import { 
-  loginAdmin, logoutAdmin, updateCourse,
+  updateCourse,
   createModule, updateModule, deleteModule,
-  createLesson, updateLesson, deleteLesson,
+  saveLesson, updateLesson, deleteLesson,
   CourseStructure 
 } from '@/app/actions';
+import { loginAdmin, logoutUser } from '@/app/auth-actions';
+import { MAX_PDF_BYTES, type ResourceLink } from '@/lib/lesson-resources';
 import styles from '../admin/admin.module.css';
 
 interface AdminDashboardClientProps {
@@ -21,15 +23,16 @@ interface AdminDashboardClientProps {
 
 export default function AdminDashboardClient({ initialData, initialAuth }: AdminDashboardClientProps) {
   const [data, setData] = useState<CourseStructure | null>(initialData);
-  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
+  const isAuthenticated = initialAuth;
   
   // Auth Form State
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Selection state
-  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(initialData?.modules[0]?.id ?? null);
 
   // Transitions
   const [isPending, startTransition] = useTransition();
@@ -51,13 +54,22 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
     video_url: '', 
     duration_minutes: 0 
   });
+  const [links, setLinks] = useState<ResourceLink[]>([]);
+  const [slides, setSlides] = useState<File | null>(null);
+  const [slidesName, setSlidesName] = useState<string | null>(null);
+  const [removeSlides, setRemoveSlides] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [logoutError, setLogoutError] = useState('');
+  const [fileInputKey, setFileInputKey] = useState(0);
 
-  // Load first module on start
-  useEffect(() => {
-    if (data && data.modules.length > 0 && selectedModuleId === null) {
-      setSelectedModuleId(data.modules[0].id);
-    }
-  }, [data, selectedModuleId]);
+  const loadResources = (lesson?: CourseStructure['lessons'][number]) => {
+    setLinks(lesson?.resource_links.map(link => ({ ...link })) || []);
+    setSlides(null);
+    setSlidesName(lesson?.slides_name || null);
+    setRemoveSlides(false);
+    setSaveError('');
+    setFileInputKey(key => key + 1);
+  };
 
   // Dialog open/close controller
   useEffect(() => {
@@ -79,15 +91,14 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
     setIsLoggingIn(true);
     
     try {
-      const res = await loginAdmin(password);
+      const res = await loginAdmin(email, password);
       if (res.success) {
-        setIsAuthenticated(true);
         // Reload data to make sure we sync with Neon
         window.location.reload();
       } else {
         setLoginError(res.error || 'Error al iniciar sesión');
       }
-    } catch (err) {
+    } catch {
       setLoginError('Error de red al conectar con el servidor');
     } finally {
       setIsLoggingIn(false);
@@ -95,9 +106,12 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
   };
 
   const handleLogout = async () => {
-    await logoutAdmin();
-    setIsAuthenticated(false);
-    window.location.reload();
+    try {
+      await logoutUser();
+      window.location.assign('/');
+    } catch {
+      setLogoutError('No se pudo cerrar la sesión. Intenta nuevamente.');
+    }
   };
 
   // --- MODULE ACTIONS ---
@@ -206,39 +220,33 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
     if (!data || selectedModuleId === null) return;
     
     startTransition(async () => {
-      const durationSeconds = (lessonForm.duration_minutes || 0) * 60;
-      
-      if (modalType === 'createLesson') {
+      setSaveError('');
+      try {
         const moduleLessons = data.lessons.filter(l => l.module_id === selectedModuleId);
-        const nextPosition = moduleLessons.length > 0 
-          ? Math.max(...moduleLessons.map(l => l.position)) + 1 
-          : 1;
-        
-        await createLesson(
-          selectedModuleId, 
-          lessonForm.title, 
-          lessonForm.description, 
-          lessonForm.video_url, 
-          durationSeconds, 
-          nextPosition
-        );
-      } else if (modalType === 'editLesson') {
         const existing = data.lessons.find(l => l.id === lessonForm.id);
-        const position = existing ? existing.position : 1;
-        
-        await updateLesson(
-          lessonForm.id,
-          lessonForm.title,
-          lessonForm.description,
-          lessonForm.video_url,
-          durationSeconds,
-          position
-        );
+        const position = existing?.position ?? (moduleLessons.length > 0
+          ? Math.max(...moduleLessons.map(l => l.position)) + 1 : 1);
+        const form = new FormData();
+        form.set('id', String(lessonForm.id));
+        form.set('moduleId', String(selectedModuleId));
+        form.set('title', lessonForm.title);
+        form.set('description', lessonForm.description);
+        form.set('videoUrl', lessonForm.video_url);
+        form.set('duration', String(lessonForm.duration_minutes * 60));
+        form.set('position', String(position));
+        form.set('links', JSON.stringify(links));
+        form.set('removeSlides', String(removeSlides));
+        if (slides) form.set('slides', slides);
+        const result = await saveLesson(form);
+        if (!result.success) {
+          setSaveError(result.error || 'No se pudo guardar la lección.');
+          return;
+        }
+        window.location.reload();
+      } catch {
+        setSaveError('No se pudo guardar la lección. Revisa tu sesión y vuelve a intentar.');
       }
-      
-      window.location.reload();
     });
-    setModalType(null);
   };
 
   const handleDeleteLesson = async () => {
@@ -273,16 +281,23 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
             </div>
             <h2 className={styles.loginTitle}>Acceso Administrador</h2>
             <p className={styles.loginDesc}>
-              Ingresa la contraseña del sistema para administrar y editar el contenido del curso.
+              Ingresa el correo y la contraseña del administrador para editar el contenido del curso.
             </p>
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className={styles.formGroup}>
+              <label htmlFor="admin-email" className={styles.formLabel}>Correo electrónico</label>
+              <input id="admin-email" type="email" autoComplete="email" required maxLength={254}
+                value={email} onChange={e => setEmail(e.target.value)} disabled={isLoggingIn} />
+            </div>
+            <div className={styles.formGroup}>
               <label htmlFor="pass" className={styles.formLabel}>Contraseña</label>
               <input 
                 id="pass"
                 type="password" 
+                autoComplete="current-password"
+                maxLength={128}
                 placeholder="••••••••" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -291,7 +306,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
               />
             </div>
 
-            {loginError && <div className={styles.errorMsg}>{loginError}</div>}
+            {loginError && <div role="alert" className={styles.errorMsg}>{loginError}</div>}
 
             <button type="submit" className={styles.loginBtn} disabled={isLoggingIn}>
               {isLoggingIn ? 'Verificando...' : 'Entrar al Panel'}
@@ -364,6 +379,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
         </div>
       </header>
 
+      {logoutError && <p role="alert" className={styles.errorMsg}>{logoutError}</p>}
       {/* COURSE CONFIGURATION BANNER */}
       <section className={styles.courseBanner}>
         <div className={styles.courseBannerTitle}>
@@ -473,6 +489,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                 className={styles.addBtn}
                 onClick={() => {
                   setLessonForm({ id: 0, title: '', description: '', video_url: '', duration_minutes: 10 });
+                  loadResources();
                   setModalType('createLesson');
                 }}
               >
@@ -531,6 +548,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                             video_url: l.video_url,
                             duration_minutes: Math.round(l.duration_seconds / 60)
                           });
+                          loadResources(l);
                           setModalType('editLesson');
                         }}
                         title="Editar lección"
@@ -547,6 +565,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                             video_url: l.video_url,
                             duration_minutes: Math.round(l.duration_seconds / 60)
                           });
+                          loadResources(l);
                           setModalType('deleteLesson');
                         }}
                         title="Eliminar lección"
@@ -562,7 +581,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                     <Play size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                     <p>No hay lecciones creadas en este módulo.</p>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Comienza agregando tu primera lección usando el botón "Añadir Lección".
+                      Comienza agregando tu primera lección usando el botón &quot;Añadir Lección&quot;.
                     </p>
                   </div>
                 </div>
@@ -577,7 +596,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
       </main>
 
       {/* --- FORM DIALOG MODAL --- */}
-      <dialog ref={dialogRef} className={styles.dialog}>
+      <dialog ref={dialogRef} className={styles.dialog} onCancel={() => setModalType(null)}>
         {/* EDIT COURSE */}
         {modalType === 'editCourse' && (
           <>
@@ -689,6 +708,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                 <input 
                   type="text" 
                   value={lessonForm.title} 
+                  disabled={isPending}
                   onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
                   placeholder="Ej. 1.1 Introducción Histórica"
                 />
@@ -699,6 +719,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                 <input 
                   type="text" 
                   value={lessonForm.video_url} 
+                  disabled={isPending}
                   onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })}
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
@@ -712,6 +733,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                 <input 
                   type="number" 
                   value={lessonForm.duration_minutes} 
+                  disabled={isPending}
                   onChange={(e) => setLessonForm({ ...lessonForm, duration_minutes: parseInt(e.target.value) || 0 })}
                   placeholder="Ej. 15"
                   min="0"
@@ -722,11 +744,63 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
                 <label className={styles.formLabel}>Descripción y Recursos (Soporta Markdown)</label>
                 <textarea 
                   value={lessonForm.description} 
+                  disabled={isPending}
                   onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
                   placeholder="Contenido de la lección, notas o recursos externos... Puedes usar **negritas** o listas con guiones (-)."
                   rows={6}
                 />
               </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="lesson-slides" className={styles.formLabel}>Diapositivas (PDF, máximo 10 MB)</label>
+                {slidesName && !removeSlides && (
+                  <div>
+                    <a href={`/api/lessons/${lessonForm.id}/slides`}>{slidesName}</a>
+                    <button type="button" className={styles.cancelBtn} disabled={isPending}
+                      onClick={() => { setRemoveSlides(true); setSlides(null); setFileInputKey(key => key + 1); }}>
+                      Eliminar PDF
+                    </button>
+                  </div>
+                )}
+                {removeSlides && <p>El PDF se eliminará al guardar los cambios.</p>}
+                <input key={fileInputKey} id="lesson-slides" type="file" accept=".pdf,application/pdf" disabled={isPending}
+                  onChange={e => {
+                    const file = e.target.files?.[0] || null;
+                    setSaveError('');
+                    if (file && (file.size > MAX_PDF_BYTES || file.size === 0)) {
+                      setSaveError('El PDF debe pesar como máximo 10 MB y no puede estar vacío.');
+                      e.target.value = '';
+                      setSlides(null);
+                      return;
+                    }
+                    setSlides(file);
+                    if (file) setRemoveSlides(false);
+                  }} />
+                <small>Selecciona un archivo para añadir o reemplazar las diapositivas.</small>
+                {slides && <button type="button" className={styles.cancelBtn} disabled={isPending}
+                  onClick={() => { setSlides(null); setFileInputKey(key => key + 1); }}>Cancelar archivo seleccionado</button>}
+              </div>
+              <div className={styles.formGroup}>
+                <h4 className={styles.formLabel}>Enlaces de estudio</h4>
+                {links.map((link, index) => (
+                  <div key={index} className={styles.resourceRow}>
+                    <input aria-label={`Título del enlace ${index + 1}`} placeholder="Título del recurso"
+                      value={link.title} maxLength={255} disabled={isPending}
+                      onChange={e => setLinks(links.map((item, i) => i === index ? { ...item, title: e.target.value } : item))} />
+                    <input aria-label={`URL del enlace ${index + 1}`} type="url" placeholder="https://..."
+                      value={link.url} disabled={isPending}
+                      onChange={e => setLinks(links.map((item, i) => i === index ? { ...item, url: e.target.value } : item))} />
+                    <button type="button" className={styles.cancelBtn} disabled={isPending}
+                      aria-label={`Eliminar enlace ${index + 1}`} onClick={() => setLinks(links.filter((_, i) => i !== index))}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className={styles.cancelBtn} disabled={isPending}
+                  onClick={() => setLinks([...links, { title: '', url: '' }])}>
+                  <Plus size={14} /> Añadir enlace
+                </button>
+              </div>
+              {saveError && <p role="alert" className={styles.errorMsg}>{saveError}</p>}
             </div>
             <div className={styles.dialogFooter}>
               <button className={styles.cancelBtn} onClick={() => setModalType(null)}>Cancelar</button>

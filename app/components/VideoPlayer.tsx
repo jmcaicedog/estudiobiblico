@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { getVideoSource } from '@/lib/video';
 
 interface VideoPlayerProps {
   url: string;
@@ -8,55 +9,7 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ url, onEnded }: VideoPlayerProps) {
-  const [embedInfo, setEmbedInfo] = useState<{ type: string; url: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    if (!url) {
-      setEmbedInfo(null);
-      setLoading(false);
-      return;
-    }
-
-    // YouTube matches:
-    // https://www.youtube.com/watch?v=dQw4w9WgXcQ
-    // https://youtu.be/dQw4w9WgXcQ
-    // https://www.youtube.com/embed/dQw4w9WgXcQ
-    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const ytMatch = url.match(ytRegex);
-
-    if (ytMatch) {
-      setEmbedInfo({
-        type: 'youtube',
-        url: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0`
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Vimeo matches:
-    // https://vimeo.com/848382920
-    // https://player.vimeo.com/video/848382920
-    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
-    const vimeoMatch = url.match(vimeoRegex);
-
-    if (vimeoMatch) {
-      setEmbedInfo({
-        type: 'vimeo',
-        url: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=0`
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Fallback to direct video file
-    setEmbedInfo({
-      type: 'direct',
-      url: url
-    });
-    setLoading(false);
-  }, [url]);
+  const embedInfo = getVideoSource(url);
 
   if (!url) {
     return (
@@ -68,12 +21,6 @@ export default function VideoPlayer({ url, onEnded }: VideoPlayerProps) {
 
   return (
     <div style={playerWrapperStyle}>
-      {loading && (
-        <div style={loadingStyle}>
-          <div className="spinner"></div>
-        </div>
-      )}
-
       {embedInfo?.type === 'youtube' && (
         <iframe
           src={embedInfo.url}
@@ -132,20 +79,6 @@ const placeholderStyle: React.CSSProperties = {
   fontSize: '1.1rem',
   border: '1px dashed rgba(255, 255, 255, 0.1)',
   padding: '24px',
-};
-
-const loadingStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(11, 15, 25, 0.8)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 10,
-  backdropFilter: 'blur(8px)',
 };
 
 const iframeStyle: React.CSSProperties = {
