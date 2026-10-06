@@ -4,8 +4,9 @@ import React, { useState, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { 
   Play, Check, ChevronDown, ChevronUp, Search, 
-  Menu, X, BookOpen, Award, Clock, ExternalLink 
+  Menu, X, Award, Clock, ExternalLink 
 } from 'lucide-react';
+import AppLogo from './AppLogo';
 import VideoPlayer from './VideoPlayer';
 import { toggleLessonCompletion, CourseStructure } from '@/app/actions';
 import { logoutUser } from '@/app/auth-actions';
@@ -47,7 +48,7 @@ export default function CoursePortalClient({ initialData, user }: CoursePortalCl
       <div className={styles.container}>
         <header className={styles.header}>
           <div className={styles.brand}>
-            <div className={styles.logoIcon}>B</div>
+            <div className={styles.logoIcon}><AppLogo /></div>
             <h1 className={styles.brandName}>Estudio Bíblico</h1>
           </div>
         </header>
@@ -184,9 +185,7 @@ export default function CoursePortalClient({ initialData, user }: CoursePortalCl
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <div className={styles.logoIcon}>
-            <BookOpen size={20} />
-          </div>
+          <div className={styles.logoIcon}><AppLogo /></div>
           <div>
             <h1 className={styles.brandName}>{data.course.title}</h1>
           </div>

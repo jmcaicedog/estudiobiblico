@@ -4,8 +4,9 @@ import React, { useState, useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { 
   Play, Plus, Edit, Trash2, ArrowUp, ArrowDown, 
-  Lock, Unlock, LogOut, BookOpen, X, Clock
+  LogOut, X, Clock
 } from 'lucide-react';
+import AppLogo from './AppLogo';
 import { 
   updateCourse,
   createModule, updateModule, deleteModule,
@@ -277,7 +278,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
         <div className={styles.loginCard}>
           <div className={styles.loginHeader}>
             <div className={styles.logoIcon} style={{ margin: '0 auto 12px', width: '48px', height: '48px', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)' }}>
-              <Lock size={22} />
+              <AppLogo size={36} />
             </div>
             <h2 className={styles.loginTitle}>Acceso Administrador</h2>
             <p className={styles.loginDesc}>
@@ -329,7 +330,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
       <div className={styles.container}>
         <header className={styles.header}>
           <div className={styles.brand}>
-            <div className={styles.logoIcon}><BookOpen size={18} /></div>
+            <div className={styles.logoIcon}><AppLogo size={32} /></div>
             <h1 className={styles.brandTitle}>Panel de Administración</h1>
           </div>
           <button className={styles.logoutBtn} onClick={handleLogout}>
@@ -361,9 +362,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brand}>
-          <div className={styles.logoIcon}>
-            <Unlock size={18} />
-          </div>
+          <div className={styles.logoIcon}><AppLogo size={32} /></div>
           <div>
             <h1 className={styles.brandTitle}>Panel de Control: {data.course.title}</h1>
           </div>

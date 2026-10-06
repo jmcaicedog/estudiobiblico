@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BookOpen } from 'lucide-react';
 import { loginUser, registerUser } from '@/app/auth-actions';
+import AppLogo from './AppLogo';
 import styles from '../admin/admin.module.css';
 
 export default function LoginClient() {
@@ -35,7 +35,9 @@ export default function LoginClient() {
     <main className={styles.loginContainer}>
       <div className={styles.loginCard}>
         <div className={styles.loginHeader}>
-          <BookOpen size={40} style={{ color: 'var(--primary)', marginBottom: 16 }} />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <AppLogo size={64} />
+          </div>
           <h1 className={styles.loginTitle}>Estudio Bíblico</h1>
           <p className={styles.loginDesc}>Ingresa a tu cuenta para estudiar y guardar tu progreso.</p>
         </div>
