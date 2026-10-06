@@ -4,50 +4,72 @@
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   
   /* Light Mode Palette */
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.15);
-  --success: #10b981;
-  --success-hover: #059669;
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
-  --border: #e2e8f0;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.4);
+  --bg-primary: #f5f0e7;
+  --bg-secondary: #fffdf8;
+  --bg-tertiary: #eee5d8;
+  --text-primary: #32251e;
+  --text-secondary: #66584d;
+  --text-muted: #89796c;
+  --primary: #843a2d;
+  --primary-hover: #6e2c23;
+  --primary-foreground: #fffaf2;
+  --primary-highlight: #b8793f;
+  --primary-glow: rgba(132, 58, 45, 0.14);
+  --primary-subtle: rgba(132, 58, 45, 0.035);
+  --primary-border: rgba(132, 58, 45, 0.18);
+  --success: #456b48;
+  --success-hover: #35583a;
+  --success-foreground: #ffffff;
+  --danger: #a43f32;
+  --danger-hover: #873126;
+  --danger-foreground: #ffffff;
+  --danger-subtle: rgba(164, 63, 50, 0.08);
+  --danger-border: rgba(164, 63, 50, 0.2);
+  --logo-bg: #eee0ca;
+  --surface-overlay: rgba(60, 38, 22, 0.05);
+  --surface-inset: rgba(60, 38, 22, 0.015);
+  --border: #dfd2c1;
+  --shadow-sm: 0 1px 2px 0 rgba(60, 38, 22, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(60, 38, 22, 0.12), 0 2px 4px -1px rgba(60, 38, 22, 0.07);
+  --shadow-lg: 0 10px 15px -3px rgba(60, 38, 22, 0.14), 0 4px 6px -2px rgba(60, 38, 22, 0.08);
+  --glass-bg: rgba(255, 253, 248, 0.84);
+  --glass-border: rgba(223, 210, 193, 0.8);
   --glass-blur: blur(12px);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode Palette - Deep Slate / Midnight Blue */
-    --bg-primary: #0b0f19;
-    --bg-secondary: #121826;
-    --bg-tertiary: #1f293d;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #4b5563;
-    --primary: #818cf8;
-    --primary-hover: #6366f1;
-    --primary-glow: rgba(129, 140, 248, 0.15);
-    --success: #34d399;
-    --success-hover: #10b981;
-    --danger: #f87171;
-    --danger-hover: #ef4444;
-    --border: #222b3e;
+    /* Dark Mode Palette - Warm espresso and amber */
+    --bg-primary: #17130f;
+    --bg-secondary: #211a15;
+    --bg-tertiary: #30251d;
+    --text-primary: #fbf2e6;
+    --text-secondary: #d0beaa;
+    --text-muted: #a48c75;
+    --primary: #e0ac62;
+    --primary-hover: #efc47c;
+    --primary-foreground: #302014;
+    --primary-highlight: #f3cf8d;
+    --primary-glow: rgba(224, 172, 98, 0.2);
+    --primary-subtle: rgba(224, 172, 98, 0.07);
+    --primary-border: rgba(224, 172, 98, 0.22);
+    --success: #9dbb82;
+    --success-hover: #b0ce94;
+    --success-foreground: #1a2517;
+    --danger: #ee9480;
+    --danger-hover: #ffad99;
+    --danger-foreground: #321811;
+    --danger-subtle: rgba(238, 148, 128, 0.1);
+    --danger-border: rgba(238, 148, 128, 0.24);
+    --logo-bg: #493426;
+    --surface-overlay: rgba(0, 0, 0, 0.16);
+    --surface-inset: rgba(255, 255, 255, 0.015);
+    --border: #49382b;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-    --glass-bg: rgba(18, 24, 38, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-bg: rgba(33, 26, 21, 0.86);
+    --glass-border: rgba(255, 242, 230, 0.07);
     --glass-blur: blur(16px);
   }
   
@@ -171,11 +193,11 @@ dialog::backdrop,
 
 dialog[open]::backdrop,
 [popover]:popover-open::backdrop {
-  background-color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(20, 14, 10, 0.65);
   backdrop-filter: blur(8px);
 
   @starting-style {
-    background-color: rgba(0, 0, 0, 0);
+    background-color: rgba(20, 14, 10, 0);
     backdrop-filter: blur(0px);
   }
 }

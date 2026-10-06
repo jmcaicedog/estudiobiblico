@@ -277,7 +277,7 @@ export default function AdminDashboardClient({ initialData, initialAuth }: Admin
       <div className={styles.loginContainer}>
         <div className={styles.loginCard}>
           <div className={styles.loginHeader}>
-            <div className={styles.logoIcon} style={{ margin: '0 auto 12px', width: '48px', height: '48px', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)' }}>
+            <div className={styles.logoIcon} style={{ margin: '0 auto 12px', width: '48px', height: '48px', backgroundColor: 'var(--logo-bg)', color: 'var(--primary)' }}>
               <AppLogo size={36} />
             </div>
             <h2 className={styles.loginTitle}>Acceso Administrador</h2>

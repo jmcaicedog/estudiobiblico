@@ -39,10 +39,9 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
-  color: white;
+  background-color: var(--logo-bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  font-weight: 700;
   box-shadow: 0 4px 12px var(--primary-glow);
 }
 
@@ -198,7 +197,7 @@
 
 .progressSection {
   padding: 16px;
-  background-color: rgba(99, 102, 241, 0.03);
+  background-color: var(--primary-subtle);
   border-bottom: 1px solid var(--border);
 }
 
@@ -222,7 +221,7 @@
 
 .progressBarFill {
   height: 100%;
-  background: linear-gradient(to right, var(--primary), #a78bfa);
+  background: linear-gradient(to right, var(--primary), var(--primary-highlight));
   transition: width 0.4s ease-out;
 }
 
@@ -239,7 +238,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.01);
+  background-color: var(--surface-inset);
   transition: border-color 0.2s;
 }
 
@@ -336,7 +335,7 @@
 .checkboxInput:checked + .customCheckbox {
   background-color: var(--success);
   border-color: var(--success);
-  color: white;
+  color: var(--success-foreground);
 }
 
 .lessonTitle {
@@ -425,7 +424,7 @@
   padding: 10px 20px;
   font-size: 0.9rem;
   border-radius: 8px;
-  color: white;
+  color: var(--primary-foreground);
   background-color: var(--primary);
 }
 
@@ -435,6 +434,7 @@
 
 .completeBtn.completed {
   background-color: var(--success);
+  color: var(--success-foreground);
 }
 
 .completeBtn.completed:hover {

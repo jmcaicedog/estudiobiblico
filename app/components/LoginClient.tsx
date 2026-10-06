@@ -35,8 +35,19 @@ export default function LoginClient() {
     <main className={styles.loginContainer}>
       <div className={styles.loginCard}>
         <div className={styles.loginHeader}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-            <AppLogo size={64} />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 80,
+            height: 80,
+            margin: '0 auto 16px',
+            backgroundColor: 'var(--logo-bg)',
+            border: '1px solid var(--border)',
+            borderRadius: 20,
+            boxShadow: '0 8px 20px var(--primary-glow)',
+          }}>
+            <AppLogo size={72} />
           </div>
           <h1 className={styles.loginTitle}>Estudio Bíblico</h1>
           <p className={styles.loginDesc}>Ingresa a tu cuenta para estudiar y guardar tu progreso.</p>
